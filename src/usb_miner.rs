@@ -59,7 +59,7 @@ impl UsbMiner {
         match data_type {
             &TYPE_RECV_STATE => {
                 let state = State::new(&data)?;
-                println!("{:?}",&state);
+                println!("{:?}", &state);
             }
             _ => {}
         }
@@ -78,7 +78,7 @@ impl UsbMiner {
         let mut varity_b = vec![];
         freq_b.write_u16::<LittleEndian>(freq).unwrap();
         voltage_b.write_u16::<LittleEndian>(voltage).unwrap();
-        varity_b.write_u32::<LittleEndian>(ALGO_VARITY);
+        varity_b.write_u32::<LittleEndian>(ALGO_VARITY).unwrap();
         let pktlen: [u8; 4] = [0x10, 0x00, 0x00, 0x00];
         let flag: [u8; 1] = [0xA2];
         let target_temp: [u8; 1] = [80];
@@ -93,6 +93,31 @@ impl UsbMiner {
                         varity_b,
                         target_temp,
                         PKT_ENDER)
+    }
+
+    pub fn write_job_msg(job_id: u8, target: u32, data: [u8; 76]) -> Vec<u8> {
+        let mut target_b = vec![];
+        target_b.write_u32::<LittleEndian>(target).unwrap();
+
+        let mut pktlen = vec![];
+        pktlen.write_u32::<LittleEndian>(104).unwrap();
+
+        let start_nonce: [u8; 8] = [0, 0, 0, 0, 0, 0, 0, 0];
+        let end_nonce: [u8; 8] = [0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
+        let job_num = [1];
+        proto_msg!(
+            PKT_HEADER,
+            [TYPE_SEND_WORK],
+            [PV],
+            pktlen,
+            target_b,
+            start_nonce,
+            end_nonce,
+            job_num,
+            [job_id],
+            data,
+            PKT_ENDER
+        )
     }
 }
 
@@ -109,6 +134,7 @@ impl Default for Config {
         }
     }
 }
+
 
 #[derive(Debug)]
 pub struct State {
@@ -128,10 +154,14 @@ pub struct State {
 
 impl State {
     fn new(raw_data: &[u8]) -> Result<Self> {
+        if raw_data.len() < 25 {
+            return Err(anyhow::anyhow!("Invalid raw data len less than 25"));
+        }
         let now = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .expect("System time is before the UNIX_EPOCH");
         let mut data = Cursor::new(&raw_data[13..]);
+
         Ok(Self {
             chips: raw_data[9],
             cores: raw_data[10],
