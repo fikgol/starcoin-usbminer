@@ -1,9 +1,9 @@
-use byteorder::{WriteBytesExt, LittleEndian, ReadBytesExt};
-use crate::{proto_msg, constants::*};
+use crate::{constants::*, proto_msg};
 use anyhow::Result;
-use std::time::{Duration, SystemTime};
-use std::io::Cursor;
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::convert::TryInto;
+use std::io::Cursor;
+use std::time::{Duration, SystemTime};
 
 pub struct Message;
 
@@ -89,7 +89,6 @@ impl Message {
     }
 }
 
-
 #[derive(Debug)]
 pub struct State {
     pub chips: u8,
@@ -133,13 +132,13 @@ impl State {
     }
 }
 
+#[derive(Debug)]
 pub enum DeriveResponse {
     // job_id, nonce, hash
     SolvedJob(u8, u32, [u8; 32]),
     State(State),
     Others(Vec<u8>),
 }
-
 
 impl DeriveResponse {
     pub fn new(raw_data: Vec<u8>) -> Result<Self> {
@@ -162,16 +161,14 @@ impl DeriveResponse {
                 let nonce = Cursor::new(&raw_data[12..]).read_u32::<LittleEndian>()?;
                 DeriveResponse::SolvedJob(job_id, nonce, hash)
             }
-            _ => {
-                DeriveResponse::Others(vec![])
-            }
+            _ => DeriveResponse::Others(raw_data),
         };
         Ok(received)
     }
 }
 
 #[cfg(test)]
-mod tests{
+mod tests {
     use super::*;
     #[test]
     fn test_set_hw_msg() {
@@ -192,5 +189,4 @@ mod tests{
         ];
         assert_eq!(expect_msg, msg.as_slice());
     }
-
 }

@@ -1,8 +1,7 @@
-
-pub mod usb_miner;
+mod constants;
 mod proto;
 mod tests;
-mod constants;
+pub mod usb_miner;
 use std::io;
 use std::io::BufRead;
 
@@ -19,7 +18,11 @@ macro_rules! proto_msg {
     };
 }
 
-pub fn read_until(buf_reader: &mut dyn BufRead, delim: &[u8], buf: &mut Vec<u8>) -> io::Result<usize> {
+pub fn read_until(
+    buf_reader: &mut dyn BufRead,
+    delim: &[u8],
+    buf: &mut Vec<u8>,
+) -> io::Result<usize> {
     let mut total_n = 0;
     loop {
         let mut tmp_buf = vec![];
@@ -35,7 +38,6 @@ pub fn read_until(buf_reader: &mut dyn BufRead, delim: &[u8], buf: &mut Vec<u8>)
     }
     Ok(total_n)
 }
-
 
 #[test]
 fn test_read_until() {

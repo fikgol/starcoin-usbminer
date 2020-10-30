@@ -1,16 +1,18 @@
 use crate::constants::*;
+use crate::proto::{DeriveResponse, Message, State};
 use crate::read_until;
+use crate::usb_miner::DeriveResponse::SolvedJob;
 use anyhow::Result;
 use serialport::{SerialPort, SerialPortSettings};
 use std::io::BufReader;
 use std::io::Write;
-use crate::usb_miner::DeriveResponse::SolvedJob;
-use crate::proto::{Message, DeriveResponse, State};
 use std::time::Duration;
 
 pub struct Config {
     pub target_freq: u16,
     pub target_voltage: u16,
+    pub read_timeout: Duration,
+    baud_rate: u32,
 }
 
 impl Default for Config {
@@ -18,6 +20,8 @@ impl Default for Config {
         Self {
             target_freq: 600,
             target_voltage: 750,
+            read_timeout: Duration::from_secs(3),
+            baud_rate: 115200,
         }
     }
 }
@@ -25,26 +29,24 @@ impl Default for Config {
 pub struct UsbMiner {
     serial_port: Box<dyn SerialPort>,
     config: Config,
-    port_buf_reader: BufReader<Box<dyn SerialPort>>,
 }
 
 impl UsbMiner {
     pub fn open(path: &str, config: Config) -> Result<Self> {
         let mut setting = SerialPortSettings::default();
-        setting.baud_rate = 115200;
-        setting.timeout = Duration::from_secs(3);
+        setting.baud_rate = config.baud_rate;
+        setting.timeout = config.read_timeout;
         let serial_port = serialport::open_with_settings(path, &setting)?;
-        let port_buf_reader = BufReader::new(serial_port.try_clone().unwrap());
         Ok(Self {
             serial_port,
             config,
-            port_buf_reader,
         })
     }
 
     pub fn read(&mut self) -> Result<DeriveResponse> {
         let mut raw_resp = vec![];
-        read_until(&mut self.port_buf_reader, &PKT_ENDER, raw_resp.as_mut())?;
+        let mut port_buf_reader = BufReader::new(&mut self.serial_port);
+        read_until(&mut port_buf_reader, &PKT_ENDER, raw_resp.as_mut())?;
         DeriveResponse::new(raw_resp)
     }
 
