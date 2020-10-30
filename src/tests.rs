@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
+    use crate::derive::{Config, UsbDerive};
     use crate::proto::Message;
     use crate::read_until;
-    use crate::usb_miner::{Config, UsbMiner};
     use anyhow::Result;
     use byteorder::{LittleEndian, WriteBytesExt};
     use std::io;
@@ -36,21 +36,28 @@ mod tests {
         }
     }
 
+    fn setup(path: &str) -> Result<UsbDerive> {
+        let mut derive = UsbDerive::open(path, Config::default()).expect("Must open serial port");
+        derive.set_hw_params()?;
+        derive.set_opcode()?;
+        Ok(derive)
+    }
+
     #[test]
-    fn test_miner() {
-        fn setup(path: &str) -> Result<UsbMiner> {
-            let mut miner = UsbMiner::open(path, Config::default()).expect("Must open serial port");
-            miner.set_hw_params()?;
-            miner.set_opcode()?;
-            miner.set_job(0xc, 0x00ffffff, INPUT_DATA)?;
-            Ok(miner)
-        }
+    fn test_derive_set() {
         let path = "/dev/cu.usbmodem2065325550561";
-        let mut miner = setup(path).unwrap();
+        let mut derive = setup(path).unwrap();
+        derive.set_job(0xc, 0x00ffffff, INPUT_DATA)?;
         loop {
-            let recv = miner.read().unwrap();
+            let recv = derive.read().unwrap();
             println!("{:?}", recv);
             std::thread::sleep(Duration::from_secs(1));
         }
+    }
+
+    #[test]
+    fn test_run() {
+        let path = "/dev/cu.usbmodem2065325550561";
+        let mut derive = setup(path).unwrap();
     }
 }

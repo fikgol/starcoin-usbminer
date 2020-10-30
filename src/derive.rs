@@ -1,7 +1,7 @@
 use crate::constants::*;
+use crate::derive::DeriveResponse::SolvedJob;
 use crate::proto::{DeriveResponse, Message, State};
 use crate::read_until;
-use crate::usb_miner::DeriveResponse::SolvedJob;
 use anyhow::Result;
 use serialport::{SerialPort, SerialPortSettings};
 use std::io::BufReader;
@@ -26,12 +26,12 @@ impl Default for Config {
     }
 }
 
-pub struct UsbMiner {
+pub struct UsbDerive {
     serial_port: Box<dyn SerialPort>,
     config: Config,
 }
 
-impl UsbMiner {
+impl UsbDerive {
     pub fn open(path: &str, config: Config) -> Result<Self> {
         let mut setting = SerialPortSettings::default();
         setting.baud_rate = config.baud_rate;

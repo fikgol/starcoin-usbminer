@@ -1,7 +1,7 @@
 mod constants;
+pub mod derive;
 mod proto;
 mod tests;
-pub mod usb_miner;
 use std::io;
 use std::io::BufRead;
 
