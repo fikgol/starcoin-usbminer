@@ -9,6 +9,5 @@ edition = "2018"
 [dependencies]
 serialport = "3.3.0"
 anyhow = "1.0"
-lazy_static = "1.4"
-serial = "0.4"
+#serial = "0.4"
 byteorder = "1.3"
