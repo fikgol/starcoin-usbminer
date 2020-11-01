@@ -1,12 +1,16 @@
 #[cfg(test)]
 mod tests {
     use crate::derive::{Config, UsbDerive};
-    use crate::proto::Message;
+    use crate::proto::{Message, DeriveResponse};
     use crate::read_until;
-    use anyhow::Result;
+    use anyhow::{Result, Error};
     use byteorder::{LittleEndian, WriteBytesExt};
     use std::io;
     use std::time::Duration;
+    use futures::channel::mpsc::unbounded;
+    use std::thread::spawn;
+    use futures::executor::block_on;
+    use futures::StreamExt;
 
     const INPUT_DATA: [u8; 76] = [
         0x05, 0x05, 0xc0, 0xa7, 0xdb, 0xc7, 0x05, 0xb0, 0xad, 0xf8, 0x2c, 0x58, 0x1a, 0xae, 0xe4,
@@ -38,8 +42,9 @@ mod tests {
 
     fn setup(path: &str) -> Result<UsbDerive> {
         let mut derive = UsbDerive::open(path, Config::default()).expect("Must open serial port");
-        derive.set_hw_params()?;
+        derive.set_hw_params();
         derive.set_opcode()?;
+        derive.get_state()?;
         Ok(derive)
     }
 
@@ -47,17 +52,16 @@ mod tests {
     fn test_derive_set() {
         let path = "/dev/cu.usbmodem2065325550561";
         let mut derive = setup(path).unwrap();
-        derive.set_job(0xc, 0x00ffffff, INPUT_DATA)?;
-        loop {
-            let recv = derive.read().unwrap();
-            println!("{:?}", recv);
-            std::thread::sleep(Duration::from_secs(1));
+        derive.set_job(0xc, 0x00ffffff, INPUT_DATA).unwrap();
+        let (tx, mut rx) = unbounded();
+        let mut derive_clone = derive.clone();
+        spawn(move || { derive_clone.process_seal(tx); });
+        block_on(async {
+            loop {
+                let d = rx.next().await.unwrap();
+                println!("{:?},{}", d.0, d.1);
+            }
         }
-    }
-
-    #[test]
-    fn test_run() {
-        let path = "/dev/cu.usbmodem2065325550561";
-        let mut derive = setup(path).unwrap();
+        );
     }
 }

@@ -1,5 +1,5 @@
-mod constants;
 pub mod derive;
+mod constants;
 mod proto;
 mod tests;
 use std::io;

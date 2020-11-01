@@ -89,7 +89,7 @@ impl Message {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct State {
     pub chips: u8,
     pub cores: u8,
@@ -132,13 +132,31 @@ impl State {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct Seal {
+    pub job_id: u8,
+    pub nonce: u32,
+    pub hash: [u8; 32],
+}
+
+impl Seal {
+    pub fn new(job_id: u8, nonce: u32, hash: [u8; 32]) -> Self {
+        Self {
+            job_id,
+            nonce,
+            hash,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum DeriveResponse {
     // job_id, nonce, hash
-    SolvedJob(u8, u32, [u8; 32]),
+    SolvedJob(Seal),
     State(State),
     Others(Vec<u8>),
 }
+
 
 impl DeriveResponse {
     pub fn new(raw_data: Vec<u8>) -> Result<Self> {
@@ -159,7 +177,7 @@ impl DeriveResponse {
                 hash.reverse();
                 let job_id = raw_data[9];
                 let nonce = Cursor::new(&raw_data[12..]).read_u32::<LittleEndian>()?;
-                DeriveResponse::SolvedJob(job_id, nonce, hash)
+                DeriveResponse::SolvedJob(Seal::new(job_id, nonce, hash))
             }
             _ => DeriveResponse::Others(raw_data),
         };
@@ -170,6 +188,7 @@ impl DeriveResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn test_set_hw_msg() {
         let msg = Message::set_hw_params_msg(600, 750);
